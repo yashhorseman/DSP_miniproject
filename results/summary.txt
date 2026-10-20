@@ -1,0 +1,276 @@
+======================================================================
+MTE 3121 DSP mini project - FFT-based vibration fault analysis
+fs = 5000 Hz, T = 2.0 s, N = 10000, resolution fs/N = 0.5 Hz, f_r = 50.0 Hz (3000 RPM), sigma = 0.25, seed = 42
+======================================================================
+
+Time-domain statistics (noisy signals)
+Case                RMS    Peak   Crest  Kurtosis
+Healthy           0.784   1.939   2.473     1.911
+Imbalance         1.803   3.339   1.852     1.533
+Misalignment      1.269   3.400   2.679     2.984
+Bearing fault     0.882   2.407   2.730     2.297
+[saved] figures/01_time_domain.png
+
+Filter design: Butterworth, sos output, sosfiltfilt (zero phase)
+  Low-pass  : order 4, fc = 400.0 Hz
+  Band-pass : order 4, band = (1000.0, 1400.0) Hz
+[saved] figures/02_filter_response.png
+
+Noise reduction from filtering (noise realisation of Step 1)
+Case           Filter     SNR before  SNR after  Noise rms before   after  Reduction
+Imbalance      low-pass      17.05 dB    25.52 dB            0.2502  0.0943     8.48 dB
+Misalignment   low-pass      14.02 dB    22.41 dB            0.2478  0.0943     8.40 dB
+Bearing fault  band-pass     -5.70 dB    12.67 dB            0.2511  0.0944     8.50 dB
+Theoretical white-noise power reduction for fc = 400 Hz: 7.96 dB
+[saved] figures/03_filtering_time.png
+[saved] figures/04_filtering_spectrum.png
+[saved] figures/05_spectra_all.png
+
+Spectral leakage demo (unit-amplitude tone, no noise)
+  50.0 Hz (bin-aligned), rectangular : peak = 1.0000
+  50.3 Hz (off-bin), rectangular  : peak = 0.7556  (scalloping error 24.4 %)
+  50.3 Hz (off-bin), Hann         : peak = 0.9010  (scalloping error 9.9 %)
+  Mean far-from-peak leakage level (300-2000 Hz): rectangular -79.5 dB, Hann -198.5 dB
+[saved] figures/06_window_leakage.png
+
+Frequency-resolution demo: tones at 50 Hz and 53 Hz (3 Hz apart)
+  N =   500: resolution   10 Hz -> 1 resolved peak(s) at [50.0] Hz
+  N =  1000: resolution    5 Hz -> 1 resolved peak(s) at [50.0] Hz
+  N = 10000: resolution  0.5 Hz -> 2 resolved peak(s) at [50.0, 53.0] Hz
+[saved] figures/07_resolution_vs_N.png
+
+Detected peaks (find_peaks, height >= 0.05, prominence >= 0.03)
+Case            Freq [Hz]  Amplitude  Injected  Label
+Healthy              50.0     1.0008     1.000  1x
+Healthy             100.0     0.3048     0.300  2x
+Healthy             150.0     0.0947     0.100  3x
+Imbalance            50.0     2.5056     2.500  1x
+Imbalance           100.0     0.3023     0.300  2x
+Imbalance           150.0     0.1004     0.100  3x
+Misalignment         25.0     0.1491     0.150  0.5x
+Misalignment         50.0     0.9988     1.000  1x
+Misalignment        100.0     1.1953     1.200  2x
+Misalignment        150.0     0.8056     0.800  3x
+Bearing fault        50.0     0.9998     1.000  1x
+Bearing fault       100.0     0.2993     0.300  2x
+Bearing fault       150.0     0.0976     0.100  3x
+Bearing fault      1113.0     0.1946     0.200  resonance - f_fault
+Bearing fault      1200.0     0.5018     0.500  bearing resonance
+Bearing fault      1287.0     0.1997     0.200  resonance + f_fault
+[saved] results/peak_table.csv
+
+Verification against injected values
+Case           Component                f inj   f det   A inj  A meas     Err  Result
+Healthy        1x                        50.0    50.0   1.000   1.001  +0.001  OK
+Healthy        2x                       100.0   100.0   0.300   0.305  +0.005  OK
+Healthy        3x                       150.0   150.0   0.100   0.095  -0.005  OK
+Imbalance      1x                        50.0    50.0   2.500   2.506  +0.006  OK
+Imbalance      2x                       100.0   100.0   0.300   0.302  +0.002  OK
+Imbalance      3x                       150.0   150.0   0.100   0.100  +0.000  OK
+Misalignment   0.5x                      25.0    25.0   0.150   0.149  -0.001  OK
+Misalignment   1x                        50.0    50.0   1.000   0.999  -0.001  OK
+Misalignment   2x                       100.0   100.0   1.200   1.195  -0.005  OK
+Misalignment   3x                       150.0   150.0   0.800   0.806  +0.006  OK
+Bearing fault  1x                        50.0    50.0   1.000   1.000  -0.000  OK
+Bearing fault  2x                       100.0   100.0   0.300   0.299  -0.001  OK
+Bearing fault  3x                       150.0   150.0   0.100   0.098  -0.002  OK
+Bearing fault  resonance - f_fault     1113.0  1113.0   0.200   0.195  -0.005  OK
+Bearing fault  bearing resonance       1200.0  1200.0   0.500   0.502  +0.002  OK
+Bearing fault  resonance + f_fault     1287.0  1287.0   0.200   0.200  -0.000  OK
+Overall verification (|df| <= 0.5 Hz, |dA| <= 0.02): PASS
+[saved] figures/08_comparison.png
+
+Envelope analysis (band-pass 1000-1400 Hz -> Hilbert envelope -> FFT)
+  Dominant envelope-spectrum peak: 87.0 Hz, amplitude 0.379 (theory A*m = 0.400, noise biases it slightly)
+  Raw-spectrum amplitude near 87 Hz: 0.0067 (no visible component: the fault rate is only in the envelope)
+[saved] figures/09_envelope_bearing.png
+
+Toy classifier, 50 runs per class, sigma = 0.25 (simulated data only)
+True \ Predicted         Healthy      Imbalance   Misalignment  Bearing fault
+Healthy                       50              0              0              0
+Imbalance                      0             50              0              0
+Misalignment                   0              0             50              0
+Bearing fault                  0              0              0             50
+Overall accuracy: 100.0 %
+[saved] figures/10_confusion_matrix.png
+
+Noise sweep (50 runs per point): detection rate of each signature peak
+Signature                             0.1   0.25    0.5      1      2      3      4      6      8     12
+Imbalance 1x (2.5)                   1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00
+Misalign. 2x (1.2)                   1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00
+Misalign. 3x (0.8)                   1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00   1.00   0.60
+Misalign. 0.5x (0.15)                1.00   1.00   1.00   1.00   0.86   0.46   0.02   0.00   0.02   0.00
+Bearing sideband 1113 Hz (0.2)       1.00   1.00   1.00   1.00   1.00   0.72   0.20   0.08   0.04   0.00
+Bearing sideband 1287 Hz (0.2)       1.00   1.00   1.00   1.00   0.98   0.70   0.30   0.04   0.02   0.00
+Toy classifier accuracy              1.00   1.00   1.00   1.00   1.00   0.98   0.83   0.42   0.28   0.25
+(columns are the noise sigma)
+  Imbalance 1x (2.5): first sigma with detection rate < 95 %: none in sweep
+  Misalign. 2x (1.2): first sigma with detection rate < 95 %: none in sweep
+  Misalign. 3x (0.8): first sigma with detection rate < 95 %: 12.0
+  Misalign. 0.5x (0.15): first sigma with detection rate < 95 %: 2.0
+  Bearing sideband 1113 Hz (0.2): first sigma with detection rate < 95 %: 3.0
+  Bearing sideband 1287 Hz (0.2): first sigma with detection rate < 95 %: 3.0
+[saved] figures/11_noise_sweep.png
+
+Monte Carlo statistics: 50 noise realisations per case, sigma = 0.25 (mean +/- std)
+
+Time-domain indicators
+Case                        RMS            Peak           Crest        Kurtosis
+Healthy             0.783+/-0.003     1.960+/-0.087     2.504+/-0.113     1.896+/-0.011
+Imbalance           1.799+/-0.002     3.340+/-0.087     1.857+/-0.048     1.530+/-0.003
+Misalignment        1.271+/-0.002     3.303+/-0.097     2.600+/-0.076     2.978+/-0.010
+Bearing fault       0.882+/-0.002     2.540+/-0.097     2.880+/-0.109     2.303+/-0.015
+
+Spectral amplitude at each injected frequency
+Case           Component              Injected     Mean      Std     Bias
+Healthy        1x                        1.000   0.9999   0.0040  -0.0001
+Healthy        2x                        0.300   0.2999   0.0036  -0.0001
+Healthy        3x                        0.100   0.0992   0.0040  -0.0008
+Imbalance      1x                        2.500   2.4995   0.0029  -0.0005
+Imbalance      2x                        0.300   0.2994   0.0030  -0.0006
+Imbalance      3x                        0.100   0.1003   0.0035  +0.0003
+Misalignment   0.5x                      0.150   0.1503   0.0037  +0.0003
+Misalignment   1x                        1.000   1.0003   0.0027  +0.0003
+Misalignment   2x                        1.200   1.2004   0.0032  +0.0004
+Misalignment   3x                        0.800   0.7999   0.0033  -0.0001
+Bearing fault  1x                        1.000   1.0002   0.0033  +0.0002
+Bearing fault  2x                        0.300   0.3001   0.0037  +0.0001
+Bearing fault  3x                        0.100   0.1000   0.0038  -0.0000
+Bearing fault  resonance - f_fault       0.200   0.2005   0.0035  +0.0005
+Bearing fault  bearing resonance         0.500   0.5008   0.0036  +0.0008
+Bearing fault  resonance + f_fault       0.200   0.2002   0.0031  +0.0002
+(theory: amplitude std per bin ~ sigma*sqrt(2/N) = 0.0035; bias is the mean error, close to zero)
+
+Filtering performance
+Case                SNR before [dB]      SNR after [dB]    Noise reduction [dB]
+Imbalance              17.07+/-0.07        25.50+/-0.18             8.44+/-0.16
+Misalignment           13.95+/-0.07        22.36+/-0.13             8.41+/-0.12
+Bearing fault          -5.70+/-0.03        12.67+/-0.17             8.45+/-0.16
+[saved] results/mc_amplitudes.csv
+
+======================================================================
+PART B - extended studies (seed reset to 42)
+======================================================================
+
+Bearing geometry: n = 9, d = 7.94 mm, D = 39.04 mm, contact angle = 0.0 deg, f_r = 50 Hz
+Frequency   Order (x f_r)        Hz
+FTF                0.3983     19.92
+BPFO               3.5848    179.24
+BPFI               5.4152    270.76
+BSF                2.3567    117.84
+BPFO is 358.478 bins of 0.5 Hz: not bin-aligned (nearest bin 179.0 Hz)
+
+Impulsive bearing model: envelope analysis (band-pass 1000-1400 Hz)
+  Dominant envelope-spectrum peak: 179.0 Hz (BPFO = 179.24 Hz), amplitude 0.151
+  Median envelope-spectrum floor (20-1000 Hz): 0.0007
+  Envelope amplitude near BPFO                  179.24 Hz: 0.1510
+  Envelope amplitude near 2 x BPFO              358.48 Hz: 0.0049
+  Envelope amplitude near 3 x BPFO              537.72 Hz: 0.0014
+  Envelope amplitude near BPFI (not injected)   270.76 Hz: 0.0047
+  Raw spectrum amplitude near BPFO: 0.0887 (visible here too: the simulated bursts are broadband; real impacts are usually masked at low frequency, hence envelope analysis)
+
+Kurtosis / crest factor over 20 runs (mean +/- std)
+Signal                      Kurt raw    Kurt >500 Hz   Crest >500 Hz   Kurt 1-1.4 kHz
+Healthy                    1.896+/-0.010     2.993+/-0.047     4.065+/-0.276     2.996+/-0.114
+Bearing (AM model)         2.298+/-0.014     2.779+/-0.019     3.347+/-0.106     2.683+/-0.021
+Bearing (impulsive)        2.879+/-0.040     6.932+/-0.122     4.997+/-0.195     2.690+/-0.036
+(The 400 Hz-wide band-pass rings for several ms and smears 0.5 ms bursts into each other, which lowers its kurtosis: the time-frequency trade-off.)
+
+Envelope line amplitude at the fault frequency (20 runs, mean)
+Case                                Rect window  Hann window
+Aligned f=179.0 Hz, no jitter            0.2257       0.2251
+BPFO=179.24 Hz, no jitter                0.1477       0.1920
+BPFO=179.24 Hz, jitter 1 %               0.1491       0.1935
+BPFO=179.24 Hz, jitter 3 %               0.1508       0.1965
+[saved] figures/12_impulsive_bearing.png
+
+Welch averaging: Hann window, 50 % overlap
+  nperseg = 2000: 9 segments, resolution 2.5 Hz
+  nperseg = 1000: 19 segments, resolution 5 Hz
+
+Noise-only floor at sigma = 4.0: largest bin vs mean floor (20 runs)
+Spectrum                  CV of floor   max/mean [dB]
+FFT (N=10000)                   0.522           10.78
+Single FFT N=2000               0.518            9.24
+Welch nperseg=2000              0.172            4.12
+Single FFT N=1000               0.520            9.31
+Welch nperseg=1000              0.118            2.70
+
+Detection rate vs noise sigma (50 runs per point)
+Signature / spectrum                               1     2     3     4     6     8    12
+Bearing sideband 1287  | FFT (N=10000)          1.00  1.00  0.82  0.32  0.00  0.00  0.00
+Bearing sideband 1287  | Single FFT N=2000      0.90  0.08  0.00  0.02  0.00  0.00  0.02
+Bearing sideband 1287  | Welch nperseg=2000     1.00  0.98  0.46  0.14  0.04  0.00  0.00
+Bearing sideband 1287  | Single FFT N=1000      0.54  0.08  0.06  0.02  0.00  0.02  0.00
+Bearing sideband 1287  | Welch nperseg=1000     1.00  0.96  0.14  0.06  0.00  0.00  0.02
+Misalign. 0.5x (0.15) | FFT (N=10000)           1.00  0.84  0.24  0.08  0.02  0.00  0.00
+Misalign. 0.5x (0.15) | Single FFT N=2000       0.58  0.08  0.00  0.00  0.00  0.00  0.00
+Misalign. 0.5x (0.15) | Welch nperseg=2000      1.00  0.68  0.14  0.06  0.02  0.00  0.00
+Misalign. 0.5x (0.15) | Single FFT N=1000       0.22  0.02  0.02  0.02  0.00  0.00  0.00
+Misalign. 0.5x (0.15) | Welch nperseg=1000      1.00  0.48  0.10  0.08  0.00  0.00  0.00
+[saved] figures/13_welch_averaging.png
+
+Fault onset at t = 1.0 s (1x: 1.0 -> 2.5)
+  Single FFT of the whole record: 1x amplitude = 1.746 (time average of the two levels = 1.750); no timing information
+  Window  Win [s]  Bin [Hz]  1x before  1x after  10-90 % rise [s]  Onset est. [s]
+     200    0.040      25.0      1.004     2.486             0.020           1.020
+     500    0.100      10.0      1.008     2.485             0.040           1.010
+    1000    0.200       5.0      1.015     2.483             0.100           1.020
+[saved] figures/14_stft_onset.png
+
+Variable speed: 50 -> 56 Hz over 2.0 s (106 revolutions); misalignment amplitudes
+Harmonic   Injected  Const-speed FFT  Drifting FFT (max)  Bins > 0.05  Order spectrum
+0.5x          0.150            0.149               0.078            5           0.150
+1x            1.000            0.999               0.356           17           0.997
+2x            1.200            1.195               0.299           29           1.200
+3x            0.800            0.806               0.163           39           0.802
+[saved] figures/15_variable_speed.png
+
+Low-pass filter comparison (fc = 400 Hz, causal single pass)
+Filter                       50 Hz  100 Hz  150 Hz -3 dB [Hz]   800 Hz  Noise red.  Delay 50  dDelay
+                              [dB]    [dB]    [dB]                [dB]        [dB]      [ms]    [ms]
+Butterworth n=4              -0.00   -0.00   -0.00        400    -26.5        7.87      1.03    0.07
+Chebyshev I n=4 (1 dB)       -0.80   -0.33   -0.00        420    -36.6        8.11      1.12    0.38
+Bessel n=4                   -0.04   -0.17   -0.38        399    -15.2        7.85      0.82    0.01
+FIR 101 taps (Hamming)        0.03   -0.00    0.03        380    -64.0        8.17     10.00    0.00
+Butterworth n=2              -0.00   -0.02   -0.08        400    -13.4        7.62      0.56    0.06
+Butterworth n=6              -0.00   -0.00   -0.00        400    -39.7        7.92      1.51    0.09
+Butterworth n=8              -0.00   -0.00   -0.00        400    -52.9        7.94      2.01    0.11
+(dDelay = group delay at 150 Hz minus at 50 Hz: waveform distortion; FIR delay is (101-1)/2/fs = 10 ms, constant)
+[saved] figures/16_filter_comparison.png
+
+Severity sweep (imbalance 1x amplitude), 20 runs per point
+ Injected 1x     Measured 1x             RMS  RMS theory
+        1.00    0.9996+/-0.0038    0.7824+/-0.0025      0.7826
+        1.50    1.5000+/-0.0032    1.1127+/-0.0024      1.1124
+        2.00    1.9982+/-0.0036    1.4521+/-0.0027      1.4534
+        2.50    2.5002+/-0.0031    1.7993+/-0.0020      1.7993
+        3.00    2.9997+/-0.0028    2.1475+/-0.0020      2.1477
+        3.50    3.4997+/-0.0026    2.4972+/-0.0018      2.4975
+        4.00    3.9999+/-0.0040    2.8482+/-0.0028      2.8482
+Linear fit of measured 1x vs injected: slope = 1.0001, intercept = -0.0007
+[saved] figures/17_severity_sweep.png
+
+Combined faults, 50 runs per class, sigma = 0.25
+True class                Single-label predictions                             Multi-label exact
+Healthy                   {'Healthy': 50}                                                  100 %
+Imbalance                 {'Imbalance': 50}                                                100 %
+Misalignment              {'Misalignment': 50}                                             100 %
+Bearing fault             {'Bearing fault': 50}                                            100 %
+Imbalance + Misalignment  {'Misalignment': 50}                                             100 %
+Imbalance + Bearing       {'Bearing fault': 50}                                            100 %
+Misalignment + Bearing    {'Bearing fault': 50}                                            100 %
+[saved] figures/18_combined_faults.png
+
+FFT cross-checks
+  Direct DFT vs np.fft.fft (N = 2000): max |difference| = 9.88e-11 (max |X| = 1000.8)
+  Parseval             sum x^2   sum |X|^2 / N   rel. error   one-sided sum  rel. error
+  Healthy             6146.874        6146.874      1.5e-16        6146.874     0.0e+00
+  Imbalance          32522.401       32522.401      0.0e+00       32522.401     0.0e+00
+  Misalignment       16101.115       16101.115      3.4e-16       16101.115     2.3e-16
+  Bearing fault       7771.253        7771.253      3.5e-16        7771.253     3.5e-16
+  Timing at N = 2048: direct DFT 67.4 ms, FFT 0.014 ms (4672x faster)
+  Fitted log-log slopes: direct DFT 1.98 (N = 128-2048), FFT 1.19 (N = 2^15-2^20; theory: 2 and slightly above 1)
+[saved] figures/19_dft_vs_fft_timing.png
+
+All figures saved to figures/ (200 dpi).

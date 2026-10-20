@@ -1,0 +1,9 @@
+numpy
+scipy
+matplotlib
+# notebook
+nbformat
+nbconvert
+ipykernel
+# Word report
+python-docx

@@ -1,0 +1,17 @@
+case,peak_frequency_Hz,measured_amplitude,injected_amplitude,label
+Healthy,50.0,1.0008,1.000,1x
+Healthy,100.0,0.3048,0.300,2x
+Healthy,150.0,0.0947,0.100,3x
+Imbalance,50.0,2.5056,2.500,1x
+Imbalance,100.0,0.3023,0.300,2x
+Imbalance,150.0,0.1004,0.100,3x
+Misalignment,25.0,0.1491,0.150,0.5x
+Misalignment,50.0,0.9988,1.000,1x
+Misalignment,100.0,1.1953,1.200,2x
+Misalignment,150.0,0.8056,0.800,3x
+Bearing fault,50.0,0.9998,1.000,1x
+Bearing fault,100.0,0.2993,0.300,2x
+Bearing fault,150.0,0.0976,0.100,3x
+Bearing fault,1113.0,0.1946,0.200,resonance - f_fault
+Bearing fault,1200.0,0.5018,0.500,bearing resonance
+Bearing fault,1287.0,0.1997,0.200,resonance + f_fault
